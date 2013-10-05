@@ -6,13 +6,13 @@ Read buffer three times due to lack of memory space.
 #define PICTURE_SIZE 4500 //read three times
 
 uint8_t MH,ML,high,low;
-int curByteIndex = 0;
-uint8_t curByte;
+int curByteIndex = 0, photoIndex = 0, bufferIndex = 0;
+uint8_t curByte, prevByte;
 uint8_t picture[PICTURE_SIZE] = {0};
 uint16_t pictureSize;
 int address = 0x0000;
 
-int i, j;
+int i, j, k;
 
 void setup()
 {
@@ -71,26 +71,34 @@ void loop()
   pictureSize = (MH << 8) | ML;
   Serial.println(pictureSize, HEX);
     
-  //read the current frame three times
-  for (j = 0; j < 3 ; j++){
+  //read the picture
+  while(photoIndex < pictureSize)
+  {
     SendReadDataCmd();
-    delay(500);
+    delay(100);
     curByteIndex = 0;
-    while(Serial1.available() >0){
+    while(Serial1.available())
+    {
       curByte = Serial1.read();
-      Serial.print(curByte, HEX);
-      Serial.print(" ");
-      picture[curByteIndex] = curByte;
+      if (curByteIndex >= 5 && curByteIndex < 37)
+      {
+        picture[bufferIndex] = curByte;
+        photoIndex++;
+        bufferIndex++;
+        if (bufferIndex == PICTURE_SIZE || photoIndex >= pictureSize){ //if the buffer is full or it's already the last "frame"
+          for (i = 0 ; i < bufferIndex ; i++){
+            Serial.print(picture[i],HEX);
+            Serial.print(" ");
+            picture[i] = 0;
+          }
+          Serial.println();
+          bufferIndex = 0;
+        }
+      }
       curByteIndex++;
     }
-    Serial.println();
-  
-    for (i = 0 ; i < PICTURE_SIZE; i++){
-      Serial.print(picture[i], HEX);
-      Serial.print(" ");
-    }
-    Serial.println();
   }
+
   
   while(1);//pause the program
 }
@@ -139,11 +147,11 @@ void SendReadDataCmd()
       Serial1.print(low, BYTE);   
       Serial1.print(0x00, BYTE); //data length
       Serial1.print(0x00, BYTE);
-      Serial1.print(0x11, BYTE);
-      Serial1.print(0x94, BYTE);
+      Serial1.print(0x00, BYTE);
+      Serial1.print(0x20, BYTE);
       Serial1.print(0x10, BYTE); //delay
       Serial1.print(0x00, BYTE);
-      address+=0x1194; //4500
+      address+=0x20; //32 bytes
 }
       
 void StopTakePhotoCmd()
