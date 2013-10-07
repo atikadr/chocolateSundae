@@ -112,6 +112,8 @@ void sendSlurrp(){
 
 void readpH(){
   Serial.println("in reading pH");
+  //add a delay(100) every time you finish sending an instruction and waiting for a response
+  //to give the pH sensor some time to respond.
 }
 
 
