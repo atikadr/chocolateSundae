@@ -10,7 +10,9 @@
         receives configuration by querying server
     - readpH()
         reads pH sensor and stores it in pHreading
-        connect pH sensor to Serial3        
+        connect pH sensor to Serial3
+    - motor()
+        turn on motor every 5 minutes if it's in AUTO mode
 *****************************************/
 
 
@@ -21,7 +23,9 @@ Timer t;
 #define SEND_DATA_PERIOD 10000
 #define RECEIVE_DATA_PERIOD 5000
 #define READ_PH_SENSOR_PERIOD 2000
-
+#define MOTOR_PERIOD 300000
+#define MOTOR_ROTATING_DURATION 30000
+#define MOTOR_SPEED 200 // 0 is completely off, 255 is maximum speed
 
 /****************************************
   DECLARATIONS
@@ -31,7 +35,8 @@ byte localhost[] = {192,168,43,60};
 Client client(localhost, 80);
 
 #define MOTOR_PIN 13
-char response; //1 indicates motor is on, 0 indicates motor is off
+char response; //1 indicates motor is on manual ON mode, 0 indicates motor is AUTO mode
+enum MOTOR_STATE {ON, OFF, AUTO};
 
 String pHreading; //stores the current pH sensor reading
 byte received_from_ph_sensor =0;
@@ -45,8 +50,8 @@ String toSend;
 *****************************************/
 
 void setup() {
-  pinMode(MOTOR_PIN, OUTPUT);
-  digitalWrite(MOTOR_PIN, LOW);
+  //pinMode(MOTOR_PIN, OUTPUT);
+  analogWrite(MOTOR_PIN, 0);
   
   Serial.begin(9600);
   Serial3.begin(38400);
@@ -71,6 +76,7 @@ void setup() {
   t.every(READ_PH_SENSOR_PERIOD, readpH);
   t.every(SEND_DATA_PERIOD, sendSlurrp);
   t.every(RECEIVE_DATA_PERIOD, receiveSlurrp);
+  //t.every(MOTOR_PERIOD, motor);
   
 }
 
@@ -93,10 +99,11 @@ void receiveSlurrp(){
     Serial.print(c);
     response = c;
   }
-  
+  /*
   Serial.print(response);
-  if (response == '1') {digitalWrite(MOTOR_PIN, HIGH);}
+  if (response == '1') {analogWrite(MOTOR_PIN, MOTOR_SPEED);}
   else {digitalWrite(MOTOR_PIN, LOW);}
+  */
 }
 
 void sendSlurrp(){
@@ -139,6 +146,14 @@ void readpH(){
   
 }
 
+
+void motor(){
+  if (MOTOR_STATE == AUTO) {
+    analogWrite(MOTOR_PIN, MOTOR_SPEED);
+    delay(MOTOR_ROTATING_DURATION);
+    analogWrite(MOTOR_PIN, 0);
+    }
+}
 
 
 //do not touch the loop
