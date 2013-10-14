@@ -13,6 +13,11 @@
         connect pH sensor to Serial3
     - motor()
         turn on motor every 5 minutes if it's in AUTO mode
+    - readRFID()
+        get data from the RFID reader
+        connect RFID reader to Serial1
+    - ASCIItable(byte, int)
+        called by readRFID to turn bytes into string
 *****************************************/
 
 
@@ -26,6 +31,7 @@ Timer t;
 #define MOTOR_PERIOD 300000
 #define MOTOR_ROTATING_DURATION 30000
 #define MOTOR_SPEED 200 // 0 is completely off, 255 is maximum speed
+#define RFID_PERIOD 3000
 
 /****************************************
   DECLARATIONS
@@ -44,6 +50,11 @@ char ph_data[20];
 byte flag_ph_received=0;
 String toSend;
 
+#define RFID_pin 22
+byte x;
+char RFID[20];
+String toSendRFID;
+
 
 /****************************************
   SETUP
@@ -52,6 +63,8 @@ String toSend;
 void setup() {
   //pinMode(MOTOR_PIN, OUTPUT);
   analogWrite(MOTOR_PIN, 0);
+  pinMode(RFID_pin, OUTPUT);
+  digitalWrite(RFID_pin, HIGH);
   
   Serial.begin(9600);
   Serial3.begin(38400);
@@ -77,6 +90,7 @@ void setup() {
   t.every(SEND_DATA_PERIOD, sendSlurrp);
   t.every(RECEIVE_DATA_PERIOD, receiveSlurrp);
   //t.every(MOTOR_PERIOD, motor);
+  //t.every(RFID_PERIOD, readRFID);
   
 }
 
@@ -142,10 +156,7 @@ void readpH(){
     pHreading = str(ph_data);
     flag_ph_received=0;
   }
-    
-  
 }
-
 
 void motor(){
   if (MOTOR_STATE == AUTO) {
@@ -155,6 +166,48 @@ void motor(){
     }
 }
 
+void ASCIItable(byte b, int i){
+  switch (b){
+    case 48: RFID[i] = '0'; break;
+    case 50: RFID[i] = '2'; break;
+    case 55: RFID[i] = '7'; break;
+    case 66: RFID[i] = 'B'; break;
+    case 68: RFID[i] = 'D'; break;
+    case 69: RFID[i] = 'E'; break;
+    case 70: RFID[i] = 'F'; break;
+    default: ;
+  }
+}
+
+void readRFID(){
+  //turn on RFID reader and delay for 500 ms
+  digitalWrite(RFID_pin, LOW);
+  delay(500);
+  
+  //if the reader detects a card
+  if(Serial.available()){
+    digitalWrite(RFID_pin, HIGH); //turn off RFID reader
+    
+    x = Serial.read();    //read in first byte
+    delay(25);
+   
+    //read the remaining bytes and put it into the packet
+    int i;
+    for (i = 0 ; i < 10 ; i++){
+      x = Serial.read();
+      ASCIItable(x, i);
+      delay(25);
+    }
+    
+    //read the last byte
+    x = Serial.read();
+    
+    Serial.println(RFID); //for testing purposes  
+    strcpy(toSendRFID, RFID); //copy the string to array of packets
+    
+    delay(1000); //wait for one second before turning on RFID again
+  }
+}
 
 //do not touch the loop
 void loop() {
