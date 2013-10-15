@@ -67,6 +67,7 @@ void setup() {
   digitalWrite(RFID_pin, HIGH);
   
   Serial.begin(9600);
+  Serial1.begin(2400);
   Serial3.begin(38400);
   
   WiFly.begin();
